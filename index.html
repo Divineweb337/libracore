@@ -205,6 +205,7 @@
               <label>Student/Staff ID<input name="memberId" required placeholder="LIB/2026/001"></label>
               <label>Department<input name="department" required placeholder="Department"></label>
               <label>Email<input name="email" type="email" required placeholder="email@example.com"></label>
+              <label>Member Picture<input name="photo" type="file" accept="image/*"></label>
               <button class="primary-btn" type="submit">Add Member</button>
             </form>
           </section>
@@ -220,10 +221,13 @@
               <table>
                 <thead>
                   <tr>
+                    <th>Photo</th>
                     <th>Name</th>
                     <th>Member ID</th>
                     <th>Department</th>
                     <th>Email</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="membersTable"></tbody>

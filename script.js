@@ -104,23 +104,47 @@ document.getElementById("memberForm").addEventListener("submit", (event) => {
     return;
   }
 
-  members.push({
-    id: Date.now(),
-    name: data.name.trim(),
-    memberId: requestedMemberId,
-    department: data.department.trim(),
-    email: data.email.trim()
-  });
-  event.target.reset();
-  saveAndRender("Member registered successfully");
+  const photoFile = event.target.photo.files[0];
+  const addMember = (photo = "") => {
+    members.push({
+      id: Date.now(),
+      name: data.name.trim(),
+      memberId: requestedMemberId,
+      department: data.department.trim(),
+      email: data.email.trim(),
+      photo,
+      banned: false
+    });
+    event.target.reset();
+    saveAndRender("Member registered successfully");
+  };
+
+  if (!photoFile) {
+    addMember();
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => addMember(reader.result);
+  reader.onerror = () => showToast("Picture could not be uploaded");
+  reader.readAsDataURL(photoFile);
 });
 
 document.getElementById("loanForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(event.target));
   const book = books.find((item) => item.id === Number(data.bookId));
+  const member = findMember(Number(data.memberId));
   if (!book || availableCopies(book) < 1) {
     showToast("Selected book is not available");
+    return;
+  }
+  if (!member) {
+    showToast("Selected member could not be found");
+    return;
+  }
+  if (member.banned) {
+    showToast("This member is banned and cannot borrow books");
     return;
   }
   book.borrowed += 1;
@@ -193,12 +217,18 @@ function renderTables() {
 
   document.getElementById("membersTable").innerHTML = filteredMembers.map((member) => `
     <tr>
+      <td>${memberPhoto(member)}</td>
       <td>${escapeHtml(member.name)}</td>
       <td>${escapeHtml(member.memberId)}</td>
       <td>${escapeHtml(member.department)}</td>
       <td>${escapeHtml(member.email)}</td>
+      <td><span class="badge ${member.banned ? "overdue" : "available"}">${member.banned ? "Banned" : "Active"}</span></td>
+      <td>
+        <button class="action-btn" onclick="toggleMemberBan(${member.id})">${member.banned ? "Unban" : "Ban"}</button>
+        <button class="action-btn danger-btn" onclick="deleteMember(${member.id})">Delete</button>
+      </td>
     </tr>
-  `).join("");
+  `).join("") || emptyRow("No members found", 7);
 
   const loanRows = filteredLoans.map((loan) => loanRow(loan, true)).join("");
   document.getElementById("loansTable").innerHTML = loanRows || emptyRow("No borrowing records found", 6);
@@ -229,8 +259,9 @@ function renderSelects() {
     .map((book) => `<option value="${book.id}">${escapeHtml(book.title)} (${availableCopies(book)} available)</option>`)
     .join("");
   memberSelect.innerHTML = members
+    .filter((member) => !member.banned)
     .map((member) => `<option value="${member.id}">${escapeHtml(member.name)} - ${escapeHtml(member.memberId)}</option>`)
-    .join("");
+    .join("") || `<option value="">No active members available</option>`;
 }
 
 function renderCategories() {
@@ -364,6 +395,38 @@ function returnBook(loanId) {
   }
 }
 
+function toggleMemberBan(memberId) {
+  const member = findMember(memberId);
+  if (!member) {
+    showToast("Member could not be found");
+    return;
+  }
+
+  member.banned = !member.banned;
+  saveAndRender(member.banned ? "Member has been banned" : "Member has been unbanned");
+}
+
+function deleteMember(memberId) {
+  const member = findMember(memberId);
+  if (!member) {
+    showToast("Member could not be found");
+    return;
+  }
+
+  const hasActiveLoan = loans.some((loan) => loan.memberId === memberId && !loan.returned);
+  if (hasActiveLoan) {
+    showToast("Return this member's borrowed books before deleting");
+    return;
+  }
+
+  const confirmed = window.confirm(`Delete ${member.name}'s member ID permanently?`);
+  if (!confirmed) return;
+
+  members = members.filter((item) => item.id !== memberId);
+  loans = loans.filter((loan) => loan.memberId !== memberId);
+  saveAndRender("Member deleted successfully");
+}
+
 function findBook(id) {
   return books.find((book) => book.id === id);
 }
@@ -417,6 +480,13 @@ function escapeHtml(value) {
 
 function normalizeMemberId(memberId) {
   return memberId.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function memberPhoto(member) {
+  if (member.photo) {
+    return `<img class="member-photo" src="${member.photo}" alt="${escapeHtml(member.name)} photo">`;
+  }
+  return `<span class="member-photo placeholder-photo">${escapeHtml(member.name.charAt(0) || "?")}</span>`;
 }
 
 function getDaysUntilDue(loan) {
