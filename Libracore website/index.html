@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">L</div>
+        <div>
+          <strong>LibraCore</strong>
+          <span>Admin Portal</span>
+        </div>
+      </div>
+      <div>
+        <p class="eyebrow">Secure Access</p>
+        <h1>Administrator Login</h1>
+        <p class="login-copy">Only authorized library administrators can manage books, members, borrowing records, and reports.</p>
+      </div>
+      <form id="loginForm" class="form-grid">
+        <label>Username<input name="username" autocomplete="username" required placeholder="Enter name"></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="Enter Password"></label>
+        <button class="primary-btn" type="submit">Login</button>
+      </form>
+      <p class="demo-login">Demo login: <strong>admin</strong> / <strong>admin123</strong></p>
+    </div>
+  </section>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">L</div>
+        <div>
+          <strong>LibraCore</strong>
+          <span>Library System</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu" aria-label="Main navigation">
+        <a class="nav-link active" href="#dashboard" data-page="dashboard">
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-link" href="#books" data-page="books">
+          <span>Books</span>
+        </a>
+        <a class="nav-link" href="#members" data-page="members">
+          <span>Members</span>
+        </a>
+        <a class="nav-link" href="#borrow" data-page="borrow">
+          <span>Borrowing</span>
+        </a>
+        <a class="nav-link" href="#reminders" data-page="reminders">
+          <span>Reminders</span>
+        </a>
+        <a class="nav-link" href="#reports" data-page="reports">
+          <span>Reports</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-note">
+        <p>Owie-Osawe Aimuamwosa Divine</p>
+        <strong>Development of a Library Management System</strong>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Academic Library Portal</p>
+          <p class="welcome-text">Welcome Admin</p>
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="top-actions">
+          <label class="search-box">
+            <span>Search</span>
+            <input id="globalSearch" type="search" placeholder="Find books, members, records">
+          </label>
+          <button class="primary-btn" id="openBorrow">Issue Book</button>
+          <button class="ghost-btn" id="logoutBtn">Logout</button>
+        </div>
+      </header>
+
+      <section class="page active" id="dashboard">
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span>Total Books</span>
+            <strong id="totalBooks">0</strong>
+            <small>Catalogued resources</small>
+          </article>
+          <article class="stat-card">
+            <span>Registered Members</span>
+            <strong id="totalMembers">0</strong>
+            <small>Students and staff</small>
+          </article>
+          <article class="stat-card">
+            <span>Borrowed Books</span>
+            <strong id="borrowedBooks">0</strong>
+            <small>Currently on loan</small>
+          </article>
+          <article class="stat-card">
+            <span>Overdue Returns</span>
+            <strong id="overdueBooks">0</strong>
+            <small>Need attention</small>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Recent Borrowing Activity</h2>
+                <p>Latest book issue and return records</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Book</th>
+                    <th>Member</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="recentLoans"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Categories</h2>
+                <p>Book distribution</p>
+              </div>
+            </div>
+            <div id="categoryList" class="category-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="books">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Add Book</h2>
+                <p>Register a new library resource</p>
+              </div>
+            </div>
+            <form id="bookForm" class="form-grid">
+              <label>Title<input name="title" required placeholder="Book title"></label>
+              <label>Author<input name="author" required placeholder="Author name"></label>
+              <label>Category<input name="category" required placeholder="Computer Science"></label>
+              <label>ISBN<input name="isbn" required placeholder="ISBN number"></label>
+              <label>Copies<input name="copies" type="number" min="1" value="1" required></label>
+              <button class="primary-btn" type="submit">Add Book</button>
+            </form>
+          </section>
+
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Book Catalogue</h2>
+                <p>Searchable list of available resources</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Category</th>
+                    <th>ISBN</th>
+                    <th>Available</th>
+                  </tr>
+                </thead>
+                <tbody id="booksTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="members">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Add Member</h2>
+                <p>Register students, lecturers, or staff</p>
+              </div>
+            </div>
+            <form id="memberForm" class="form-grid">
+              <label>Full Name<input name="name" required placeholder="Member name"></label>
+              <label>Student/Staff ID<input name="memberId" required placeholder="LIB/2026/001"></label>
+              <label>Department<input name="department" required placeholder="Department"></label>
+              <label>Email<input name="email" type="email" required placeholder="email@example.com"></label>
+              <label>Member Picture<input name="photo" type="file" accept="image/*"></label>
+              <button class="primary-btn" type="submit">Add Member</button>
+            </form>
+          </section>
+
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Members</h2>
+                <p>Registered library users</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Member ID</th>
+                    <th>Department</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="membersTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="borrow">
+        <div class="split-layout">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Issue Book</h2>
+                <p>Create a borrowing record</p>
+              </div>
+            </div>
+            <form id="loanForm" class="form-grid">
+              <label>Book<select name="bookId" id="bookSelect" required></select></label>
+              <label>Member<select name="memberId" id="memberSelect" required></select></label>
+              <label>Issue Date<input name="issueDate" type="date" required></label>
+              <label>Due Date<input name="dueDate" type="date" required></label>
+              <button class="primary-btn" type="submit">Issue Book</button>
+            </form>
+          </section>
+
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Borrowing Records</h2>
+                <p>Track issued books and returns</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Book</th>
+                    <th>Member</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="loansTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="reminders">
+        <div class="content-grid">
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Email Due Date Reminders</h2>
+                <p>Members are reminded two days before the due date and when books become overdue</p>
+              </div>
+              <button class="primary-btn" id="sendAllReminders">Send Due Reminders</button>
+            </div>
+            <div class="notice-box">
+              <strong>Reminder rule:</strong>
+              <span>The system checks active borrowing records and prepares email reminders for books due within two days, due today, or already overdue.</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Email</th>
+                    <th>Book</th>
+                    <th>Due Date</th>
+                    <th>Reminder Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="remindersTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Reminder Center</h2>
+                <p>Email notification status</p>
+              </div>
+            </div>
+            <div id="emailConfigStatus" class="setup-status"></div>
+            <ul class="module-list compact-list">
+              <li>Checks books due in two days.</li>
+              <li>Checks books due today.</li>
+              <li>Checks books that are overdue.</li>
+              <li>Uses the member email saved during registration.</li>
+              <li>Sends through the Vercel email endpoint.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="reports">
+        <div class="content-grid">
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>System Report</h2>
+                <p>Summary for project presentation and library administration</p>
+              </div>
+              <button class="ghost-btn" id="printReport">Print Report</button>
+            </div>
+            <div class="report-grid">
+              <article>
+                <span>Most Popular Category</span>
+                <strong id="popularCategory">-</strong>
+              </article>
+              <article>
+                <span>Available Copies</span>
+                <strong id="availableCopies">0</strong>
+              </article>
+              <article>
+                <span>Returned Books</span>
+                <strong id="returnedBooks">0</strong>
+              </article>
+            </div>
+            <div class="report-text">
+              <h3>Project Scope</h3>
+              <p>This Library Management System supports book registration, member registration, book issuing, return tracking, search, catalogue viewing, and administrative reporting. It demonstrates how a digital system can reduce manual record keeping and improve access to library information.</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>System Modules</h2>
+                <p>Functional areas included</p>
+              </div>
+            </div>
+            <ul class="module-list">
+              <li>Book catalogue management</li>
+              <li>Member registration</li>
+              <li>Borrowing and return records</li>
+              <li>Overdue tracking</li>
+              <li>Administrative reports</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>
