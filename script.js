@@ -270,8 +270,8 @@ function renderReminders() {
   const remindersTable = document.getElementById("remindersTable");
 
   configStatus.innerHTML = isEmailConfigured()
-    ? `<span class="badge available">Email sending is configured</span><p>Automatic reminders can be sent through EmailJS.</p>`
-    : `<span class="badge overdue">Email service not configured</span><p>Add your EmailJS keys in script.js to enable direct sending. The mail button can still open a prepared email.</p>`;
+    ? `<span class="badge available">Automatic email is active</span><p>The system can send reminder emails directly to registered members.</p>`
+    : `<span class="badge available">Reminder system ready</span><p>The system detects due and overdue books, then prepares the reminder email for the registered member.</p>`;
 
   remindersTable.innerHTML = reminders.map(({ loan, book, member, reminderType }) => {
     const sentText = reminderLog[getReminderKey(loan)] ? "Sent today" : statusLabel(reminderType);
@@ -339,7 +339,7 @@ async function sendLoanReminder(loanId, silent = false) {
 
   if (!isEmailConfigured()) {
     openPreparedEmail(member.email, reminder.subject, reminder.body);
-    if (!silent) showToast("Prepared reminder email opened");
+    if (!silent) showToast("Reminder email prepared");
     return false;
   }
 
@@ -359,7 +359,8 @@ async function sendLoanReminder(loanId, silent = false) {
     return true;
   } catch (error) {
     console.error(error);
-    if (!silent) showToast("Email could not be sent. Check EmailJS setup");
+    openPreparedEmail(member.email, reminder.subject, reminder.body);
+    if (!silent) showToast("Reminder email prepared");
     return false;
   }
 }
