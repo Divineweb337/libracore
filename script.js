@@ -33,11 +33,6 @@ const toast = document.getElementById("toast");
 const loginScreen = document.getElementById("loginScreen");
 const appShell = document.querySelector(".app-shell");
 const adminUser = { username: "admin", password: "admin123" };
-const emailService = {
-  publicKey: "",
-  serviceId: "",
-  templateId: ""
-};
 const reminderLeadDays = 2;
 
 let reminderLog = JSON.parse(localStorage.getItem("libraryReminderLog")) || {};
@@ -269,9 +264,7 @@ function renderReminders() {
   const configStatus = document.getElementById("emailConfigStatus");
   const remindersTable = document.getElementById("remindersTable");
 
-  configStatus.innerHTML = isEmailConfigured()
-    ? `<span class="badge available">Automatic email is active</span><p>The system can send reminder emails directly to registered members.</p>`
-    : `<span class="badge available">Reminder system ready</span><p>The system detects due and overdue books, then prepares the reminder email for the registered member.</p>`;
+  configStatus.innerHTML = `<span class="badge available">Automatic email is active</span><p>The system sends due-date reminders to the registered member email through the Vercel email endpoint.</p>`;
 
   remindersTable.innerHTML = reminders.map(({ loan, book, member, reminderType }) => {
     const sentText = reminderLog[getReminderKey(loan)] ? "Sent today" : statusLabel(reminderType);
@@ -302,11 +295,6 @@ function getReminderCandidates() {
 }
 
 function runAutomaticReminderCheck() {
-  if (!isEmailConfigured()) {
-    renderReminders();
-    return;
-  }
-
   const dueReminders = getReminderCandidates().filter(({ loan }) => !reminderLog[getReminderKey(loan)]);
   if (!dueReminders.length) return;
   Promise.allSettled(dueReminders.map(({ loan }) => sendLoanReminder(loan.id, true)));
@@ -337,21 +325,23 @@ async function sendLoanReminder(loanId, silent = false) {
 
   const reminder = buildReminderMessage(loan, book, member);
 
-  if (!isEmailConfigured()) {
-    openPreparedEmail(member.email, reminder.subject, reminder.body);
-    if (!silent) showToast("Reminder email prepared");
-    return false;
-  }
-
   try {
-    initializeEmailService();
-    await emailjs.send(emailService.serviceId, emailService.templateId, {
-      to_email: member.email,
-      to_name: member.name,
-      book_title: book.title,
-      due_date: loan.dueDate,
-      reminder_message: reminder.body
+    const response = await fetch("/api/send-reminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: member.email,
+        toName: member.name,
+        subject: reminder.subject,
+        message: reminder.body,
+        bookTitle: book.title,
+        dueDate: loan.dueDate
+      })
     });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Email could not be sent");
+
     reminderLog[getReminderKey(loan)] = new Date().toISOString();
     localStorage.setItem("libraryReminderLog", JSON.stringify(reminderLog));
     if (!silent) showToast("Reminder email sent successfully");
@@ -359,8 +349,7 @@ async function sendLoanReminder(loanId, silent = false) {
     return true;
   } catch (error) {
     console.error(error);
-    openPreparedEmail(member.email, reminder.subject, reminder.body);
-    if (!silent) showToast("Reminder email prepared");
+    if (!silent) showToast(error.message || "Reminder email could not be sent");
     return false;
   }
 }
@@ -440,16 +429,6 @@ function getReminderKey(loan) {
   return `${loan.id}-${dateToInput(today)}`;
 }
 
-function isEmailConfigured() {
-  return Boolean(emailService.publicKey && emailService.serviceId && emailService.templateId && window.emailjs);
-}
-
-function initializeEmailService() {
-  if (!window.emailjs || window.emailServiceReady) return;
-  emailjs.init({ publicKey: emailService.publicKey });
-  window.emailServiceReady = true;
-}
-
 function buildReminderMessage(loan, book, member) {
   const daysUntilDue = getDaysUntilDue(loan);
   const duePhrase = daysUntilDue < 0
@@ -469,11 +448,6 @@ Thank you.
 Library Administrator`;
 
   return { subject, body };
-}
-
-function openPreparedEmail(email, subject, body) {
-  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href = mailto;
 }
 
 setDefaultDates();

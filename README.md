@@ -20,14 +20,13 @@ This is a static website. The records are stored in the browser using local stor
 
 ## Email Reminder Setup
 
-The Reminders module checks active borrowing records and prepares reminders for books due within two days, due today, or overdue.
+The Reminders module checks active borrowing records and sends reminders for books due within two days, due today, or overdue.
 
-To send emails directly from the deployed site, create an EmailJS account and add your `publicKey`, `serviceId`, and `templateId` inside `script.js`.
+The deployed site sends email through the Vercel API route at `/api/send-reminder`.
 
-Recommended EmailJS template variables:
+Add these environment variables in Vercel:
 
-- `to_email`
-- `to_name`
-- `book_title`
-- `due_date`
-- `reminder_message`
+- `RESEND_API_KEY`: your Resend API key.
+- `FROM_EMAIL`: the sender email address, for example `LibraCore Library <onboarding@resend.dev>`.
+
+After adding the variables, redeploy the Vercel project.
