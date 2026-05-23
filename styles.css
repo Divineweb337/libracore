@@ -196,6 +196,12 @@ h2 {
   margin-bottom: 4px;
 }
 
+.welcome-text {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .top-actions {
   display: flex;
   align-items: center;
@@ -454,11 +460,32 @@ tbody tr:hover {
   line-height: 1.65;
 }
 
+.notice-box,
+.setup-status {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf9;
+  color: #3c4856;
+}
+
+.setup-status p {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .module-list {
   margin: 0;
   padding-left: 20px;
   line-height: 2;
   color: #3c4856;
+}
+
+.compact-list {
+  line-height: 1.65;
 }
 
 .action-btn {

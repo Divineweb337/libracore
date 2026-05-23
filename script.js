@@ -33,6 +33,14 @@ const toast = document.getElementById("toast");
 const loginScreen = document.getElementById("loginScreen");
 const appShell = document.querySelector(".app-shell");
 const adminUser = { username: "admin", password: "admin123" };
+const emailService = {
+  publicKey: "",
+  serviceId: "",
+  templateId: ""
+};
+const reminderLeadDays = 2;
+
+let reminderLog = JSON.parse(localStorage.getItem("libraryReminderLog")) || {};
 
 if (sessionStorage.getItem("libraryAdminLoggedIn") !== "true") {
   appShell.classList.add("locked");
@@ -48,6 +56,7 @@ document.getElementById("loginForm").addEventListener("submit", (event) => {
     loginScreen.classList.add("hidden");
     appShell.classList.remove("locked");
     showToast("Admin login successful");
+    runAutomaticReminderCheck();
     return;
   }
   showToast("Invalid admin username or password");
@@ -69,6 +78,7 @@ document.querySelectorAll(".nav-link").forEach((link) => {
 
 document.getElementById("openBorrow").addEventListener("click", () => showPage("borrow"));
 document.getElementById("printReport").addEventListener("click", () => window.print());
+document.getElementById("sendAllReminders").addEventListener("click", sendAllDueReminders);
 
 document.getElementById("bookForm").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -145,6 +155,7 @@ function saveAndRender(message) {
   localStorage.setItem("libraryBooks", JSON.stringify(books));
   localStorage.setItem("libraryMembers", JSON.stringify(members));
   localStorage.setItem("libraryLoans", JSON.stringify(loans));
+  localStorage.setItem("libraryReminderLog", JSON.stringify(reminderLog));
   renderAll();
   showToast(message);
 }
@@ -155,6 +166,7 @@ function renderAll() {
   renderSelects();
   renderCategories();
   renderReports();
+  renderReminders();
 }
 
 function renderStats() {
@@ -209,7 +221,7 @@ function loanRow(loan, showAction) {
       <td>${loan.issueDate}</td>
       <td>${loan.dueDate}</td>
       <td><span class="badge ${status}">${statusLabel(status)}</span></td>
-      ${showAction ? `<td>${loan.returned ? "Completed" : `<button class="action-btn" onclick="returnBook(${loan.id})">Return</button>`}</td>` : ""}
+      ${showAction ? `<td>${loan.returned ? "Completed" : `<button class="action-btn" onclick="returnBook(${loan.id})">Return</button> <button class="action-btn" onclick="sendLoanReminder(${loan.id})">Email</button>`}</td>` : ""}
     </tr>
   `;
 }
@@ -252,6 +264,106 @@ function renderReports() {
   document.getElementById("returnedBooks").textContent = loans.filter((loan) => loan.returned).length;
 }
 
+function renderReminders() {
+  const reminders = getReminderCandidates();
+  const configStatus = document.getElementById("emailConfigStatus");
+  const remindersTable = document.getElementById("remindersTable");
+
+  configStatus.innerHTML = isEmailConfigured()
+    ? `<span class="badge available">Email sending is configured</span><p>Automatic reminders can be sent through EmailJS.</p>`
+    : `<span class="badge overdue">Email service not configured</span><p>Add your EmailJS keys in script.js to enable direct sending. The mail button can still open a prepared email.</p>`;
+
+  remindersTable.innerHTML = reminders.map(({ loan, book, member, reminderType }) => {
+    const sentText = reminderLog[getReminderKey(loan)] ? "Sent today" : statusLabel(reminderType);
+    return `
+      <tr>
+        <td>${escapeHtml(member.name)}</td>
+        <td>${escapeHtml(member.email)}</td>
+        <td>${escapeHtml(book.title)}</td>
+        <td>${loan.dueDate}</td>
+        <td><span class="badge ${reminderType === "overdue" ? "overdue" : "borrowed"}">${sentText}</span></td>
+        <td><button class="action-btn" onclick="sendLoanReminder(${loan.id})">Send Email</button></td>
+      </tr>
+    `;
+  }).join("") || emptyRow("No books are due within two days or overdue", 6);
+}
+
+function getReminderCandidates() {
+  return loans
+    .filter((loan) => !loan.returned)
+    .map((loan) => {
+      const book = findBook(loan.bookId);
+      const member = findMember(loan.memberId);
+      const daysUntilDue = getDaysUntilDue(loan);
+      const reminderType = daysUntilDue < 0 ? "overdue" : "dueSoon";
+      return { loan, book, member, daysUntilDue, reminderType };
+    })
+    .filter(({ book, member, daysUntilDue }) => book && member && member.email && daysUntilDue <= reminderLeadDays);
+}
+
+function runAutomaticReminderCheck() {
+  if (!isEmailConfigured()) {
+    renderReminders();
+    return;
+  }
+
+  const dueReminders = getReminderCandidates().filter(({ loan }) => !reminderLog[getReminderKey(loan)]);
+  if (!dueReminders.length) return;
+  Promise.allSettled(dueReminders.map(({ loan }) => sendLoanReminder(loan.id, true)));
+}
+
+async function sendAllDueReminders() {
+  const dueReminders = getReminderCandidates();
+  if (!dueReminders.length) {
+    showToast("No due or overdue reminders to send");
+    return;
+  }
+
+  const results = await Promise.allSettled(dueReminders.map(({ loan }) => sendLoanReminder(loan.id, true)));
+  const sent = results.filter((result) => result.status === "fulfilled" && result.value).length;
+  showToast(`${sent} reminder email${sent === 1 ? "" : "s"} processed`);
+  renderReminders();
+}
+
+async function sendLoanReminder(loanId, silent = false) {
+  const loan = loans.find((item) => item.id === loanId);
+  const book = loan ? findBook(loan.bookId) : null;
+  const member = loan ? findMember(loan.memberId) : null;
+
+  if (!loan || !book || !member) {
+    if (!silent) showToast("Reminder record could not be found");
+    return false;
+  }
+
+  const reminder = buildReminderMessage(loan, book, member);
+
+  if (!isEmailConfigured()) {
+    openPreparedEmail(member.email, reminder.subject, reminder.body);
+    if (!silent) showToast("Prepared reminder email opened");
+    return false;
+  }
+
+  try {
+    initializeEmailService();
+    await emailjs.send(emailService.serviceId, emailService.templateId, {
+      to_email: member.email,
+      to_name: member.name,
+      book_title: book.title,
+      due_date: loan.dueDate,
+      reminder_message: reminder.body
+    });
+    reminderLog[getReminderKey(loan)] = new Date().toISOString();
+    localStorage.setItem("libraryReminderLog", JSON.stringify(reminderLog));
+    if (!silent) showToast("Reminder email sent successfully");
+    renderReminders();
+    return true;
+  } catch (error) {
+    console.error(error);
+    if (!silent) showToast("Email could not be sent. Check EmailJS setup");
+    return false;
+  }
+}
+
 function returnBook(loanId) {
   const loan = loans.find((item) => item.id === loanId);
   const book = findBook(loan.bookId);
@@ -282,6 +394,7 @@ function getLoanStatus(loan) {
 function statusLabel(status) {
   return {
     borrowed: "Borrowed",
+    dueSoon: "Due Soon",
     overdue: "Overdue",
     returned: "Returned"
   }[status];
@@ -316,8 +429,58 @@ function normalizeMemberId(memberId) {
   return memberId.trim().toUpperCase().replace(/\s+/g, "");
 }
 
+function getDaysUntilDue(loan) {
+  const start = new Date(dateToInput(today));
+  const due = new Date(loan.dueDate);
+  return Math.ceil((due - start) / 86400000);
+}
+
+function getReminderKey(loan) {
+  return `${loan.id}-${dateToInput(today)}`;
+}
+
+function isEmailConfigured() {
+  return Boolean(emailService.publicKey && emailService.serviceId && emailService.templateId && window.emailjs);
+}
+
+function initializeEmailService() {
+  if (!window.emailjs || window.emailServiceReady) return;
+  emailjs.init({ publicKey: emailService.publicKey });
+  window.emailServiceReady = true;
+}
+
+function buildReminderMessage(loan, book, member) {
+  const daysUntilDue = getDaysUntilDue(loan);
+  const duePhrase = daysUntilDue < 0
+    ? `is overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? "" : "s"}`
+    : daysUntilDue === 0
+      ? "is due today"
+      : `will be due in ${daysUntilDue} day${daysUntilDue === 1 ? "" : "s"}`;
+
+  const subject = `Library book reminder: ${book.title}`;
+  const body = `Dear ${member.name},
+
+This is a reminder from LibraCore Library Management System that the book "${book.title}" ${duePhrase}. The due date is ${loan.dueDate}.
+
+Please return the book on or before the due date. If it is already overdue, kindly return it immediately to avoid violating the library rule.
+
+Thank you.
+Library Administrator`;
+
+  return { subject, body };
+}
+
+function openPreparedEmail(email, subject, body) {
+  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+}
+
 setDefaultDates();
 renderAll();
+
+if (sessionStorage.getItem("libraryAdminLoggedIn") === "true") {
+  window.setTimeout(runAutomaticReminderCheck, 800);
+}
 
 if (window.location.hash) {
   const requestedPage = window.location.hash.replace("#", "");

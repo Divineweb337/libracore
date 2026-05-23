@@ -56,6 +56,9 @@
         <a class="nav-link" href="#borrow" data-page="borrow">
           <span>Borrowing</span>
         </a>
+        <a class="nav-link" href="#reminders" data-page="reminders">
+          <span>Reminders</span>
+        </a>
         <a class="nav-link" href="#reports" data-page="reports">
           <span>Reports</span>
         </a>
@@ -71,7 +74,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Academic Library Portal</p>
-          <h1 id="page-title">Welcome Admin</h1>
+          <p class="welcome-text">Welcome Admin</p>
           <h1 id="page-title">Dashboard</h1>
         </div>
         <div class="top-actions">
@@ -274,6 +277,54 @@
         </div>
       </section>
 
+      <section class="page" id="reminders">
+        <div class="content-grid">
+          <section class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Email Due Date Reminders</h2>
+                <p>Members are reminded two days before the due date and when books become overdue</p>
+              </div>
+              <button class="primary-btn" id="sendAllReminders">Send Due Reminders</button>
+            </div>
+            <div class="notice-box">
+              <strong>Reminder rule:</strong>
+              <span>The system checks active borrowing records and prepares email reminders for books due within two days, due today, or already overdue.</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Email</th>
+                    <th>Book</th>
+                    <th>Due Date</th>
+                    <th>Reminder Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="remindersTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Email Setup</h2>
+                <p>Configuration status</p>
+              </div>
+            </div>
+            <div id="emailConfigStatus" class="setup-status"></div>
+            <ul class="module-list compact-list">
+              <li>Create an EmailJS account.</li>
+              <li>Add your service ID, template ID, and public key in <strong>script.js</strong>.</li>
+              <li>Use template fields: to_email, to_name, book_title, due_date, reminder_message.</li>
+            </ul>
+          </section>
+        </div>
+      </section>
+
       <section class="page" id="reports">
         <div class="content-grid">
           <section class="panel wide">
@@ -325,6 +376,7 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
