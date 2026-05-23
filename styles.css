@@ -389,6 +389,12 @@ tbody tr:hover {
   background: #fff0ee;
 }
 
+.copy-input {
+  width: 92px;
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
 .member-photo {
   width: 44px;
   height: 44px;

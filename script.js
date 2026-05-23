@@ -212,6 +212,8 @@ function renderTables() {
       <td>${escapeHtml(book.category)}</td>
       <td>${escapeHtml(book.isbn)}</td>
       <td><span class="badge available">${availableCopies(book)} of ${book.copies}</span></td>
+      <td><input class="copy-input" id="copies-${book.id}" type="number" min="${book.borrowed}" value="${book.copies}" aria-label="Total copies for ${escapeHtml(book.title)}"></td>
+      <td><button class="action-btn" onclick="updateBookCopies(${book.id})">Update</button></td>
     </tr>
   `).join("");
 
@@ -393,6 +395,32 @@ function returnBook(loanId) {
     book.borrowed = Math.max(0, book.borrowed - 1);
     saveAndRender("Book returned successfully");
   }
+}
+
+function updateBookCopies(bookId) {
+  const book = findBook(bookId);
+  const input = document.getElementById(`copies-${bookId}`);
+  const newTotal = Number(input.value);
+
+  if (!book || !input) {
+    showToast("Book could not be found");
+    return;
+  }
+
+  if (!Number.isInteger(newTotal) || newTotal < 1) {
+    showToast("Enter a valid number of copies");
+    input.value = book.copies;
+    return;
+  }
+
+  if (newTotal < book.borrowed) {
+    showToast(`Copies cannot be less than ${book.borrowed} already borrowed`);
+    input.value = book.copies;
+    return;
+  }
+
+  book.copies = newTotal;
+  saveAndRender("Book copy count updated");
 }
 
 function toggleMemberBan(memberId) {
