@@ -34,6 +34,7 @@ const loginScreen = document.getElementById("loginScreen");
 const appShell = document.querySelector(".app-shell");
 const adminUser = { username: "admin", password: "admin123" };
 const reminderLeadDays = 2;
+const dailyFineRate = 200;
 
 let reminderLog = JSON.parse(localStorage.getItem("libraryReminderLog")) || {};
 
@@ -233,7 +234,7 @@ function renderTables() {
   `).join("") || emptyRow("No members found", 7);
 
   const loanRows = filteredLoans.map((loan) => loanRow(loan, true)).join("");
-  document.getElementById("loansTable").innerHTML = loanRows || emptyRow("No borrowing records found", 6);
+  document.getElementById("loansTable").innerHTML = loanRows || emptyRow("No borrowing records found", 7);
   document.getElementById("recentLoans").innerHTML = loans.slice(0, 5).map((loan) => loanRow(loan, false)).join("");
 }
 
@@ -248,6 +249,7 @@ function loanRow(loan, showAction) {
       <td>${loan.issueDate}</td>
       <td>${loan.dueDate}</td>
       <td><span class="badge ${status}">${statusLabel(status)}</span></td>
+      <td>${formatCurrency(getLoanFine(loan))}</td>
       ${showAction ? `<td>${loan.returned ? "Completed" : `<button class="action-btn" onclick="returnBook(${loan.id})">Return</button> <button class="action-btn" onclick="sendLoanReminder(${loan.id})">Email</button>`}</td>` : ""}
     </tr>
   `;
@@ -290,6 +292,7 @@ function renderReports() {
   document.getElementById("popularCategory").textContent = popular;
   document.getElementById("availableCopies").textContent = books.reduce((sum, book) => sum + availableCopies(book), 0);
   document.getElementById("returnedBooks").textContent = loans.filter((loan) => loan.returned).length;
+  document.getElementById("totalFines").textContent = formatCurrency(loans.reduce((sum, loan) => sum + getLoanFine(loan), 0));
 }
 
 function renderReminders() {
@@ -392,8 +395,10 @@ function returnBook(loanId) {
   const book = findBook(loan.bookId);
   if (loan && book && !loan.returned) {
     loan.returned = true;
+    loan.returnDate = dateToInput(today);
+    loan.fine = getLoanFine(loan);
     book.borrowed = Math.max(0, book.borrowed - 1);
-    saveAndRender("Book returned successfully");
+    saveAndRender(`Book returned successfully. Fine: ${formatCurrency(loan.fine)}`);
   }
 }
 
@@ -470,6 +475,21 @@ function availableCopies(book) {
 function getLoanStatus(loan) {
   if (loan.returned) return "returned";
   return new Date(loan.dueDate) < new Date(dateToInput(today)) ? "overdue" : "borrowed";
+}
+
+function getLoanFine(loan) {
+  if (loan.returned && typeof loan.fine === "number") return loan.fine;
+  return getOverdueDays(loan) * dailyFineRate;
+}
+
+function getOverdueDays(loan) {
+  const due = new Date(loan.dueDate);
+  const end = new Date(loan.returnDate || dateToInput(today));
+  return Math.max(0, Math.ceil((end - due) / 86400000));
+}
+
+function formatCurrency(amount) {
+  return `₦${Number(amount).toLocaleString("en-NG")}`;
 }
 
 function statusLabel(status) {
